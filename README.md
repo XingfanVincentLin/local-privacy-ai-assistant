@@ -2,7 +2,7 @@
 
 A privacy-preserving personal AI assistant that runs entirely on local hardware.
 A client-server RAG (Retrieval-Augmented Generation) system for querying smart
-home data and personal files using natural language — without any cloud
+home data and personal files using natural language, without any cloud
 dependency.
 
 > Academic project for IU Internationale Hochschule, Course DLMCSPCSP01 (Project:
@@ -12,7 +12,7 @@ dependency.
 
 This system answers natural-language questions about a user's own personal data
 (Home Assistant sensor history, CSV exports, documents) entirely on local
-hardware — a Raspberry Pi 5 or an Apple Silicon MacBook Air. No data leaves the
+hardware: a Raspberry Pi 5 or an Apple Silicon MacBook Air. No data leaves the
 home network.
 
 **Example queries:**
@@ -67,7 +67,7 @@ web UI, and full evaluation harness will be completed for Phase 3.
 ollama pull llama3.2:3b
 
 # 2. Clone the repo and set up the Python environment
-git clone https://github.com/xingfan-lin/local-privacy-ai-assistant.git
+git clone https://github.com/XingfanVincentLin/local-privacy-ai-assistant.git
 cd local-privacy-ai-assistant
 python3.11 -m venv .venv
 source .venv/bin/activate
@@ -95,7 +95,7 @@ See the project report (Section 9.1) for the full source tree.
 This system is designed and verified to make zero outbound network connections
 during operation. The only external traffic occurs during initial setup (model
 and dependency downloads). Verification is performed via `tcpdump` packet
-captures on the server interface during a 30-minute query session — see Phase
+captures on the server interface during a 30-minute query session. See Phase
 3 evaluation results.
 
 ## Licence
@@ -104,4 +104,4 @@ MIT (planned for final release).
 
 ## Author
 
-Xingfan Lin · Munich, Germany · IU Master's in Computer Science
+Xingfan Lin, Munich, Germany. IU Master's in Computer Science.
