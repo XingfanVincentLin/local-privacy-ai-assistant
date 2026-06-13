@@ -1,19 +1,18 @@
 # Local Privacy AI Assistant
 
-A privacy-preserving personal AI assistant that runs entirely on local hardware.
-A client-server RAG (Retrieval-Augmented Generation) system for querying smart
-home data and personal files using natural language, without any cloud
-dependency.
+A privacy-preserving personal AI assistant for querying Home Assistant data with
+a local RAG (Retrieval-Augmented Generation) pipeline.
 
 > Academic project for IU Internationale Hochschule, Course DLMCSPCSP01 (Project:
 > Computer Science Project). Author: Xingfan Lin (IU14140678).
 
 ## Overview
 
-This system answers natural-language questions about a user's own personal data
-(Home Assistant sensor history, CSV exports, documents) entirely on local
-hardware: a Raspberry Pi 5 or an Apple Silicon MacBook Air. No data leaves the
-home network.
+This system answers natural-language questions about local smart home data
+without sending the data to a cloud assistant. In the Phase 3 implementation,
+Home Assistant remains on the Raspberry Pi 5 as the data source, while the
+Apple Silicon MacBook Air runs the AI server, Ollama, ChromaDB, and the web UI.
+All operational data flow stays inside the local network.
 
 **Example queries:**
 
@@ -41,66 +40,105 @@ home network.
                                          +-----------------------+
 ```
 
-See the project report PDF for full architecture, RAG pipeline, and component
-interaction diagrams.
+The Raspberry Pi keeps the existing Home Assistant setup stable. The MacBook is
+used for local LLM inference because it is more practical for responsive model
+generation during evaluation.
 
 ## Tech stack
 
-- **LLM runtime:** Ollama (running Llama 3.2 3B or Phi-3 Mini)
+- **LLM runtime:** Ollama (initial model: `qwen2.5:7b`)
 - **Embeddings:** sentence-transformers (`all-MiniLM-L6-v2`)
 - **Vector DB:** ChromaDB
 - **Backend:** FastAPI
 - **Frontend:** Vanilla HTML + JavaScript
 - **Language:** Python 3.11+
-- **Hosting:** Raspberry Pi 5 (8 GB) or Apple Silicon Mac
+- **Hosting:** Apple Silicon Mac for AI server; Raspberry Pi 5 for Home Assistant
 
 ## Status
 
-This is an academic work-in-progress. As of Phase 2 (May 2026), the environment
-is set up and the core pipeline scaffolding is in place. The FastAPI server,
-web UI, and full evaluation harness will be completed for Phase 3.
+This repository now contains the Phase 3 implementation scaffold:
 
-## Installation (preliminary)
+- Home Assistant REST history ingestion
+- sensor event normalization and chunking
+- ChromaDB storage
+- sentence-transformers embeddings
+- Ollama-based RAG orchestration
+- FastAPI API and simple local web UI
+- benchmark, entity inventory, Ollama check, and ingestion scripts
+- unit tests for the core pure-Python components
+
+## Installation
 
 ```bash
-# 1. Install Ollama (https://ollama.com) and pull a model
-ollama pull llama3.2:3b
+# 1. Install Python 3.11+ if needed
+brew install python@3.11
 
-# 2. Clone the repo and set up the Python environment
+# 2. Confirm Ollama is installed and the model is available
+ollama list
+# This project currently uses qwen2.5:7b.
+
+# 3. Clone the repo and set up the Python environment
 git clone https://github.com/XingfanVincentLin/local-privacy-ai-assistant.git
 cd local-privacy-ai-assistant
-python3.11 -m venv .venv
+/opt/homebrew/bin/python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+pip install -e .
 
-# 3. Configure
-cp config.yaml.example config.yaml
-# Edit config.yaml with your Home Assistant URL and long-lived access token
+# 4. Configure local secrets
+cp .env.example .env
+# Edit .env with your Home Assistant URL and long-lived access token.
+# Do not commit .env.
 
-# 4. Run the initial ingestion
-python scripts/ingest_once.py
+# 5. Run the initial ingestion
+python scripts/list_entities.py
+python scripts/ingest_once.py --hours 24
 
-# 5. Start the server
-uvicorn src.server.api:app --host 0.0.0.0 --port 8000
+# 6. Start the server
+python -m uvicorn local_privacy_ai.server.api:app --host 127.0.0.1 --port 8000
 ```
 
-Open `http://<server-ip>:8000` in any browser on your home network.
+Open `http://127.0.0.1:8000` in a browser on the Mac.
 
 ## Repository structure
 
-See the project report (Section 9.1) for the full source tree.
+- `local_privacy_ai/`: application package
+- `scripts/`: ingestion and evaluation entry points
+- `tests/`: unit tests
+- `docs/`: Phase 3 workflow notes
+- `data/benchmark_questions.example.json`: benchmark template
 
 ## Privacy guarantee
 
-This system is designed and verified to make zero outbound network connections
-during operation. The only external traffic occurs during initial setup (model
-and dependency downloads). Verification is performed via `tcpdump` packet
-captures on the server interface during a 30-minute query session. See Phase
-3 evaluation results.
+The system is designed so that normal query handling uses only the local Mac,
+Ollama, local ChromaDB storage, and the Home Assistant API on the home network.
+The final Phase 3 evaluation will verify this with packet capture during an
+active query session. ChromaDB is configured with anonymized telemetry disabled.
+Dependency downloads and model downloads are treated as setup steps, not part of
+normal operation.
 
-## Licence
+## Running tests
 
-MIT (planned for final release).
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+## Useful scripts
+
+```bash
+# Confirm the selected local Ollama model responds
+python scripts/check_ollama.py
+
+# Export a CSV inventory of useful Home Assistant entities
+python scripts/list_entities.py
+
+# Ingest recent Home Assistant history into ChromaDB
+python scripts/ingest_once.py --hours 24
+
+# Run benchmark questions after data has been ingested
+python scripts/eval_benchmark.py --questions data/benchmark_questions.json
+```
 
 ## Author
 

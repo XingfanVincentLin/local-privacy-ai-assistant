@@ -1,0 +1,21 @@
+[
+  {
+    "id": "temp-01",
+    "category": "temperature",
+    "question": "What temperature did the bedroom sensor report yesterday evening?",
+    "expected_answer": "Fill this in from Home Assistant history before running the final benchmark."
+  },
+  {
+    "id": "motion-01",
+    "category": "motion",
+    "question": "Was any motion detected in the living room overnight?",
+    "expected_answer": "Fill this in from Home Assistant history before running the final benchmark."
+  },
+  {
+    "id": "energy-01",
+    "category": "energy",
+    "question": "Did the workstation smart plug use more power than the TV smart plug?",
+    "expected_answer": "Fill this in from Home Assistant history before running the final benchmark."
+  }
+]
+

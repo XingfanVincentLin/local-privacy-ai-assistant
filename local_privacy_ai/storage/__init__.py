@@ -1,0 +1,2 @@
+"""Vector storage layer."""
+
