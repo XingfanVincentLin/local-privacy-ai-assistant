@@ -34,6 +34,10 @@ async def main() -> None:
     rows = []
     for item in questions:
         result = await orchestrator.answer(item["question"])
+        source_ids = [source["id"] for source in result.sources]
+        source_entities = [
+            str(source.get("metadata", {}).get("entity_id", "")) for source in result.sources
+        ]
         rows.append(
             {
                 "id": item["id"],
@@ -43,6 +47,8 @@ async def main() -> None:
                 "answer": result.answer,
                 "latency_ms": result.latency_ms,
                 "source_count": len(result.sources),
+                "source_entities": "; ".join(source_entities),
+                "source_ids": "; ".join(source_ids),
                 "manual_score": "",
                 "notes": "",
             }
