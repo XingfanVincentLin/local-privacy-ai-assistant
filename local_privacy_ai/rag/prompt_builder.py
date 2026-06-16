@@ -12,8 +12,10 @@ def build_prompt(query: str, sources: list[dict]) -> str:
         "You are a local privacy-preserving assistant for Home Assistant data.\n"
         "Answer only from the provided context. If the context is not enough, say that the "
         "available data is insufficient. Keep the answer concise and mention uncertainty.\n\n"
+        "If the question asks for the latest, current, newest, or most recent value, compare "
+        "the timestamps in the retrieved sources and use the newest relevant timestamp. Do not "
+        "answer from an older event when a newer relevant event is present.\n\n"
         f"Context:\n{context}\n\n"
         f"Question: {query}\n\n"
         "Answer:"
     )
-

@@ -115,15 +115,20 @@ def _recency_score(metadata: dict) -> float:
         return 0.0
 
 
-def _diverse_top_k(sources: list[dict], k: int) -> list[dict]:
-    max_per_entity = max(2, min(4, (k + 1) // 2))
+def _diverse_top_k(
+    sources: list[dict],
+    k: int,
+    max_per_entity: int | None = None,
+    allow_backfill: bool = True,
+) -> list[dict]:
+    resolved_max_per_entity = max_per_entity or max(2, min(4, (k + 1) // 2))
     selected: list[dict] = []
     skipped: list[dict] = []
     entity_counts: dict[str, int] = {}
 
     for source in sources:
         entity_id = str(source["metadata"].get("entity_id", source["id"]))
-        if entity_counts.get(entity_id, 0) < max_per_entity:
+        if entity_counts.get(entity_id, 0) < resolved_max_per_entity:
             selected.append(source)
             entity_counts[entity_id] = entity_counts.get(entity_id, 0) + 1
         else:
@@ -131,7 +136,9 @@ def _diverse_top_k(sources: list[dict], k: int) -> list[dict]:
         if len(selected) == k:
             return selected
 
-    return (selected + skipped)[:k]
+    if allow_backfill:
+        return (selected + skipped)[:k]
+    return selected[:k]
 
 
 class ChromaStore:
@@ -226,4 +233,10 @@ class ChromaStore:
             return (lexical_score + vector_score, vector_score)
 
         ranked_sources = sorted(candidates.values(), key=sort_key, reverse=True)
-        return _diverse_top_k(ranked_sources, k)
+        max_per_entity = 1 if has_recency_intent else None
+        return _diverse_top_k(
+            ranked_sources,
+            k,
+            max_per_entity=max_per_entity,
+            allow_backfill=not has_recency_intent,
+        )

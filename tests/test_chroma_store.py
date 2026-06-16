@@ -133,6 +133,50 @@ def test_chroma_store_prefers_recent_chunks_for_latest_questions(tmp_path) -> No
     assert results[0]["id"] == "chunk-tv-new"
 
 
+def test_chroma_store_limits_latest_results_to_one_chunk_per_entity(tmp_path) -> None:
+    store = ChromaStore(
+        persist_dir=tmp_path / "chroma",
+        collection_name="test_collection",
+        embedder=HashingEmbedder(),
+    )
+    chunks = [
+        TextChunk(
+            id="chunk-bathroom-motion-old",
+            text="At 10:00, Bathroom Motion Sensor was active or detected motion.",
+            metadata={
+                "entity_id": "binary_sensor.bathroom_motion",
+                "friendly_name": "Bathroom Motion Sensor",
+                "end_time": "2026-06-16T10:00:00+00:00",
+            },
+        ),
+        TextChunk(
+            id="chunk-bathroom-motion-new",
+            text="At 17:00, Bathroom Motion Sensor was inactive.",
+            metadata={
+                "entity_id": "binary_sensor.bathroom_motion",
+                "friendly_name": "Bathroom Motion Sensor",
+                "end_time": "2026-06-16T17:00:00+00:00",
+            },
+        ),
+        TextChunk(
+            id="chunk-kitchen-motion-new",
+            text="At 17:05, Kitchen Motion Sensor was inactive.",
+            metadata={
+                "entity_id": "binary_sensor.kitchen_motion",
+                "friendly_name": "Kitchen Motion Sensor",
+                "end_time": "2026-06-16T17:05:00+00:00",
+            },
+        ),
+    ]
+
+    store.upsert_chunks(chunks)
+    results = store.search("latest bathroom motion sensor reading", k=3)
+    result_ids = [result["id"] for result in results]
+
+    assert "chunk-bathroom-motion-new" in result_ids
+    assert "chunk-bathroom-motion-old" not in result_ids
+
+
 def test_chroma_store_treats_warmer_questions_as_temperature_questions(tmp_path) -> None:
     store = ChromaStore(
         persist_dir=tmp_path / "chroma",
