@@ -20,6 +20,11 @@ from local_privacy_ai.storage.embeddings import SentenceTransformerEmbedder
 async def main() -> None:
     parser = argparse.ArgumentParser(description="Ingest Home Assistant history into ChromaDB.")
     parser.add_argument("--hours", type=int, default=24, help="Number of history hours to ingest.")
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Clear the Chroma collection before ingesting the selected history window.",
+    )
     args = parser.parse_args()
 
     settings = Settings.from_env()
@@ -35,6 +40,9 @@ async def main() -> None:
         collection_name=settings.chroma_collection,
         embedder=SentenceTransformerEmbedder(),
     )
+    if args.reset:
+        removed = store.clear()
+        print(f"Cleared {removed} existing chunks from the collection.")
     inserted = store.upsert_chunks(chunks)
     print(f"Ingested {len(events)} events into {inserted} chunks.")
 

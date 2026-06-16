@@ -16,7 +16,7 @@ class OllamaClient:
             "stream": False,
             "options": {
                 "temperature": 0.1,
-                "num_predict": 350,
+                "num_predict": 180,
             },
         }
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -24,4 +24,3 @@ class OllamaClient:
             response.raise_for_status()
             data = response.json()
             return str(data.get("response", "")).strip()
-

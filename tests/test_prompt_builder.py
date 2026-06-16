@@ -10,6 +10,8 @@ def test_build_prompt_instructs_model_to_use_context_only() -> None:
     )
 
     assert "Answer only from the provided context" in prompt
+    assert "Include the timestamp" in prompt
     assert "compare the timestamps" in prompt
+    assert "For comparison questions" in prompt
     assert "Living Room Motion" in prompt
     assert "Was motion detected?" in prompt

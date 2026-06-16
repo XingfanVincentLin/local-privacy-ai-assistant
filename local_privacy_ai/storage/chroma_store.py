@@ -90,6 +90,8 @@ def _query_terms(query: str) -> set[str]:
     query_terms = _tokens(query)
     if raw_terms & TEMPERATURE_INTENT_TERMS:
         query_terms.add("temperature")
+    if "motion" in raw_terms and "illuminance" not in raw_terms:
+        query_terms.add("occupancy")
     return query_terms
 
 
@@ -171,6 +173,14 @@ class ChromaStore:
         )
         return len(chunks)
 
+    def clear(self) -> int:
+        result = self.collection.get(include=[])
+        ids = result.get("ids", [])
+        if not ids:
+            return 0
+        self.collection.delete(ids=ids)
+        return len(ids)
+
     def search(self, query: str, k: int = 5) -> list[dict]:
         count = self.collection.count()
         if count == 0:
@@ -224,6 +234,16 @@ class ChromaStore:
                 "recency_score": _recency_score(metadata),
             }
 
+        candidate_values = list(candidates.values())
+        if has_recency_intent and query_terms and candidate_values:
+            max_lexical_score = max(int(source["lexical_score"]) for source in candidate_values)
+            if max_lexical_score > 0:
+                candidate_values = [
+                    source
+                    for source in candidate_values
+                    if int(source["lexical_score"]) == max_lexical_score
+                ]
+
         def sort_key(source: dict) -> tuple[float, ...]:
             distance = source["distance"]
             vector_score = 0.0 if distance is None else 1.0 / (1.0 + float(distance))
@@ -232,7 +252,7 @@ class ChromaStore:
                 return (lexical_score, float(source["recency_score"]), vector_score)
             return (lexical_score + vector_score, vector_score)
 
-        ranked_sources = sorted(candidates.values(), key=sort_key, reverse=True)
+        ranked_sources = sorted(candidate_values, key=sort_key, reverse=True)
         max_per_entity = 1 if has_recency_intent else None
         return _diverse_top_k(
             ranked_sources,

@@ -27,6 +27,28 @@ def test_chroma_store_upserts_and_searches_chunks(tmp_path) -> None:
     assert results[0]["metadata"]["entity_id"] == "sensor.tv_power"
 
 
+def test_chroma_store_clear_removes_existing_chunks(tmp_path) -> None:
+    store = ChromaStore(
+        persist_dir=tmp_path / "chroma",
+        collection_name="test_collection",
+        embedder=HashingEmbedder(),
+    )
+    store.upsert_chunks(
+        [
+            TextChunk(
+                id="chunk-1",
+                text="At 10:00, TV Power measured 42 W.",
+                metadata={"entity_id": "sensor.tv_power"},
+            )
+        ]
+    )
+
+    removed = store.clear()
+
+    assert removed == 1
+    assert store.search("TV power", k=1) == []
+
+
 def test_chroma_store_boosts_exact_room_and_sensor_terms(tmp_path) -> None:
     store = ChromaStore(
         persist_dir=tmp_path / "chroma",
@@ -175,6 +197,76 @@ def test_chroma_store_limits_latest_results_to_one_chunk_per_entity(tmp_path) ->
 
     assert "chunk-bathroom-motion-new" in result_ids
     assert "chunk-bathroom-motion-old" not in result_ids
+
+
+def test_chroma_store_filters_weak_room_matches_for_latest_questions(tmp_path) -> None:
+    store = ChromaStore(
+        persist_dir=tmp_path / "chroma",
+        collection_name="test_collection",
+        embedder=HashingEmbedder(),
+    )
+    chunks = [
+        TextChunk(
+            id="chunk-bathroom-illuminance",
+            text="Latest bathroom illuminance reading: 1.0 lx at 16:22.",
+            metadata={
+                "entity_id": "sensor.bathroom_illuminance",
+                "friendly_name": "Bathroom Illuminance",
+                "end_time": "2026-06-16T16:22:00+00:00",
+            },
+        ),
+        TextChunk(
+            id="chunk-kitchen-illuminance",
+            text="Latest kitchen illuminance reading: 33.0 lx at 18:08.",
+            metadata={
+                "entity_id": "sensor.kitchen_illuminance",
+                "friendly_name": "Kitchen Illuminance",
+                "end_time": "2026-06-16T18:08:00+00:00",
+            },
+        ),
+    ]
+
+    store.upsert_chunks(chunks)
+    results = store.search("latest bathroom illuminance reading", k=2)
+    result_ids = [result["id"] for result in results]
+
+    assert result_ids == ["chunk-bathroom-illuminance"]
+
+
+def test_chroma_store_prefers_occupancy_for_motion_state_questions(tmp_path) -> None:
+    store = ChromaStore(
+        persist_dir=tmp_path / "chroma",
+        collection_name="test_collection",
+        embedder=HashingEmbedder(),
+    )
+    chunks = [
+        TextChunk(
+            id="chunk-kitchen-occupancy",
+            text="Latest Kitchen Motion Sensor Occupancy state: inactive at 18:08.",
+            metadata={
+                "entity_id": "binary_sensor.kitchen_motion_occupancy",
+                "friendly_name": "Kitchen Motion Sensor Occupancy",
+                "domain": "binary_sensor",
+                "end_time": "2026-06-16T18:08:00+00:00",
+            },
+        ),
+        TextChunk(
+            id="chunk-kitchen-illuminance",
+            text="Latest Kitchen Motion Sensor Illuminance reading: 1.0 lx at 18:10.",
+            metadata={
+                "entity_id": "sensor.kitchen_motion_illuminance",
+                "friendly_name": "Kitchen Motion Sensor Illuminance",
+                "domain": "sensor",
+                "end_time": "2026-06-16T18:10:00+00:00",
+            },
+        ),
+    ]
+
+    store.upsert_chunks(chunks)
+    results = store.search("Was the kitchen motion sensor active or inactive latest?", k=2)
+    result_ids = [result["id"] for result in results]
+
+    assert result_ids == ["chunk-kitchen-occupancy"]
 
 
 def test_chroma_store_treats_warmer_questions_as_temperature_questions(tmp_path) -> None:

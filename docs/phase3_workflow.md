@@ -16,7 +16,7 @@ requirements.
 
 ```bash
 python scripts/list_entities.py
-python scripts/ingest_once.py --hours 24
+python scripts/ingest_once.py --hours 24 --reset
 python -m uvicorn local_privacy_ai.server.api:app --reload
 ```
 
